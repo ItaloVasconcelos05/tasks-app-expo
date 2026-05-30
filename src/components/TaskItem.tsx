@@ -2,16 +2,18 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather, AntDesign } from '@expo/vector-icons';
 import { TaskItem as TaskType } from '../utils/handle-api';
+import { useTaskStore } from '../store/useTaskStore';
 
 // TODO (Zustand): Mantenha apenas a prop 'task'. Remova 'updateMode' e 'deleteTask'
 interface TaskItemProps {
   task: TaskType;
   updateMode: () => void;
-  deleteTask: () => void;
 }
 
 // TODO (Zustand): Importe o useTaskStore e pegue as actions de atualizar e deletar diretamente da store
-const TaskItem: React.FC<TaskItemProps> = ({ task, updateMode, deleteTask }) => {
+const TaskItem: React.FC<TaskItemProps> = ({ task, updateMode }) => {
+  const removeTask = useTaskStore((state) => state.removeTask);
+  
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date(new Date().setHours(0, 0, 0, 0));
 
   return (
@@ -30,7 +32,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, updateMode, deleteTask }) => 
         <TouchableOpacity onPress={updateMode} accessibilityRole="button">
           <Feather name="edit" size={20} color="#fff" style={styles.icon} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={deleteTask} accessibilityRole="button">
+        <TouchableOpacity onPress={() => removeTask(task._id)} accessibilityRole="button">
           <AntDesign name="delete" size={20} color="#fff" style={styles.icon} />
         </TouchableOpacity>
       </View>

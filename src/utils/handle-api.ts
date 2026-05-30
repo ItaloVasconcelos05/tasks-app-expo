@@ -1,8 +1,16 @@
 import axios from 'axios';
 import React from 'react';
+import { useAuthStore } from '../store/useAuthStore';
 
 const baseURL = process.env.EXPO_PUBLIC_API_URL;
 
+axios.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().token; // Vai buscar o token ao Zustand
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 export interface TaskItem {
   _id: string;
   text: string;

@@ -1,35 +1,39 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, Platform, StatusBar as RNStatusBar, Image, Pressable, ActivityIndicator, Modal, Button } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Platform, StatusBar as RNStatusBar, Image, Pressable, ActivityIndicator, Modal, Button } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Checkbox from 'expo-checkbox';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import TaskList from './src/components/TaskList';
-import { addTask, deleteTask, getAllTasks, updateTask, TaskItem } from './src/utils/handle-api';
-import { globalStyles } from './src/styles/global';
-import AboutScreen from './src/components/AboutScreen';
+import TaskList from '../src/components/TaskList';
+import AboutScreen from '../src/components/AboutScreen';
+import { globalStyles } from '../src/styles/global';
+
 
 // TODO (Zustand): Importe o seu useTaskStore aqui
+import { useTaskStore } from '../src/store/useTaskStore';
 
 export default function App() {
   // TODO (Zustand): Remova este useState e utilize o seletor da sua store para pegar as tasks
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+
+  const { tasks, isLoading, fetchAllTasks, addNewTask, editTask, clearAll } = useTaskStore();
+
   const [text, setText] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [taskId, setTaskId] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [logoError, setLogoError] = useState(false);
   const [filter, setFilter] = useState<'all' | 'completed' | 'pending'>('all');
 
+  
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [priority, setPriority] = useState<'Baixa' | 'Média' | 'Alta'>('Baixa');
+  const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
     // TODO (Zustand): Atualize esta chamada para usar a action correspondente da store
-    getAllTasks(setTasks, setLoading);
+    fetchAllTasks();
   }, []);
 
   const resetForm = () => {
@@ -42,7 +46,7 @@ export default function App() {
     setModalVisible(false);
   };
 
-  const updateMode = (task: TaskItem) => {
+  const updateMode = (task: any) => {
     setIsUpdating(true);
     setTaskId(task._id);
     setText(task.text);
@@ -51,14 +55,12 @@ export default function App() {
     setModalVisible(true);
   };
 
-  const handleSave = () => {
+const handleSave = () => {
     const formattedDate = dueDate ? dueDate.toISOString() : null;
     if (isUpdating) {
-      // TODO (Zustand): Substitua a chamada abaixo pela action de atualizar da sua store
-      updateTask(taskId, text, completed, formattedDate, setTasks, resetForm);
+      editTask(taskId, text, completed, formattedDate, resetForm);
     } else {
-      // TODO (Zustand): Substitua a chamada abaixo pela action de adicionar da sua store
-      addTask(text, completed, formattedDate, setTasks, resetForm);
+      addNewTask(text, completed, formattedDate, resetForm);
     }
   };
 
@@ -67,7 +69,7 @@ export default function App() {
     if (selectedDate) setDueDate(selectedDate);
   };
 
-  return (
+ return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.headerContainer}>
@@ -75,7 +77,7 @@ export default function App() {
             <Text style={styles.header}>Gerenciador de Tarefas</Text>
           ) : (
             <Image 
-              source={require('./assets/task-app-banner.png')} 
+              source={require('../assets/task-app-banner.png')} 
               style={styles.logo} 
               onError={() => setLogoError(true)}
             />
@@ -126,8 +128,7 @@ export default function App() {
               styles.deleteButton,
               pressed && styles.deleteButtonPressed
             ]}
-            // TODO (Zustand): Chame a action de deletar todas as tarefas da sua store
-            onPress={() => setTasks([])} 
+            onPress={() => clearAll()} 
           >
             <Text style={styles.actionButtonText}>Excluir todas</Text>
           </Pressable>
@@ -138,17 +139,9 @@ export default function App() {
         </View>
 
         {/* TODO (Zustand): Remova as props tasks, onUpdate e onDelete após refatorar o TaskList */}
-        <TaskList 
-          tasks={tasks.filter(t => {
-            if (filter === 'completed') return t.completed;
-            if (filter === 'pending') return !t.completed;
-            return true;
-          })} 
-          onUpdate={updateMode} 
-          onDelete={(id) => deleteTask(id, setTasks)} 
-        />
+        <TaskList filter={filter} onUpdate={updateMode} />
 
-        {loading && (
+        {isLoading && (
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color="#000" />
           </View>
